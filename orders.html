@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sportsstore — Mis pedidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+.orders-wrap{max-width:900px;margin:0 auto;padding:2.5rem clamp(1rem,3vw,2rem) 6rem}
+.page-hd{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.page-hd-left h1{font-family:'Fraunces',serif;font-size:clamp(26px,4vw,38px);font-weight:300;letter-spacing:-.5px;line-height:1.1}
+.page-hd-left p{font-size:13px;color:var(--ink4);margin-top:.375rem}
+.btn-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink3);cursor:pointer;font-family:'Outfit',sans-serif;padding:6px 12px;border-radius:var(--r2);border:1px solid var(--paper3);background:var(--white);transition:all var(--transition);flex-shrink:0}
+.btn-back:hover{border-color:var(--ink3);color:var(--ink)}
+.stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--paper3);border:1px solid var(--paper3);border-radius:var(--r2);overflow:hidden;margin-bottom:2rem}
+.stat{background:var(--white);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:4px}
+.stat-val{font-family:'Fraunces',serif;font-size:26px;font-weight:300;color:var(--ink)}
+.stat-lbl{font-size:11px;color:var(--ink4);text-transform:uppercase;letter-spacing:.08em}
+.filter-tabs{display:flex;gap:.375rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.tab{font-size:12px;font-weight:500;padding:6px 14px;border-radius:var(--r4);border:1px solid var(--paper3);background:var(--white);color:var(--ink3);cursor:pointer;transition:all var(--transition);font-family:'Outfit',sans-serif}
+.tab:hover{border-color:var(--ink3);color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.order-list{display:flex;flex-direction:column;gap:.75rem}
+.order-card{background:var(--white);border:1px solid var(--paper3);border-radius:var(--r2);overflow:hidden;transition:border-color var(--transition)}
+.order-card:hover{border-color:var(--ink4)}
+.order-card-hd{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;cursor:pointer;gap:1rem;flex-wrap:wrap}
+.order-hd-left{display:flex;align-items:center;gap:.875rem;flex-wrap:wrap}
+.order-num{font-family:'DM Mono',monospace;font-size:13px;font-weight:400;color:var(--ink)}
+.order-date{font-size:12px;color:var(--ink4)}
+.order-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:var(--r4);letter-spacing:.04em;flex-shrink:0}
+.status-paid{background:#ECFDF5;color:#0F6E56}
+.status-pending{background:#FEF3C7;color:#92400E}
+.status-cancelled{background:#FEF2F2;color:#A32D2D}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.order-hd-right{display:flex;align-items:center;gap:1rem;flex-shrink:0}
+.order-total{font-family:'DM Mono',monospace;font-size:15px;font-weight:400;color:var(--ink)}
+.order-chevron{width:20px;height:20px;color:var(--ink4);transition:transform var(--transition);flex-shrink:0}
+.order-card.open .order-chevron{transform:rotate(180deg)}
+.order-body{display:none;border-top:1px solid var(--paper3);padding:1rem 1.25rem 1.25rem}
+.order-card.open .order-body{display:block}
+.order-items{display:flex;flex-direction:column;gap:.625rem;margin-bottom:1rem}
+.oi{display:flex;align-items:center;gap:12px;padding:.625rem;border-radius:var(--r);background:var(--paper)}
+.oi-thumb{width:44px;height:44px;border-radius:var(--r);background:var(--paper2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.oi-info{flex:1;min-width:0}
+.oi-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oi-brand{font-size:11px;color:var(--ink4)}
+.oi-qty{font-size:12px;color:var(--ink4);margin-top:1px}
+.oi-price{font-family:'DM Mono',monospace;font-size:13px;color:var(--ink);flex-shrink:0}
+.order-summary{display:flex;justify-content:space-between;align-items:center;padding-top:.875rem;border-top:1px solid var(--paper3);flex-wrap:wrap;gap:.75rem}
+.order-summary-total{display:flex;flex-direction:column;gap:2px}
+.order-summary-total span:first-child{font-size:11px;color:var(--ink4);text-transform:uppercase;letter-spacing:.07em}
+.order-summary-total strong{font-family:'Fraunces',serif;font-size:22px;font-weight:300;color:var(--ink)}
+.btn-reorder{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:8px 18px;border-radius:var(--r2);background:var(--ink);color:var(--white);border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:opacity var(--transition)}
+.btn-reorder:hover{opacity:.82}
+.load-more-wrap{text-align:center;margin-top:1.5rem}
+.btn-load-more{font-size:13px;font-weight:500;padding:10px 28px;border-radius:var(--r2);border:1.5px solid var(--paper3);background:var(--white);color:var(--ink3);cursor:pointer;font-family:'Outfit',sans-serif;transition:all var(--transition)}
+.btn-load-more:hover{border-color:var(--ink);color:var(--ink)}
+.order-skel{background:var(--white);border:1px solid var(--paper3);border-radius:var(--r2);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:.75rem}
+.state-box{text-align:center;padding:6rem 2rem;background:var(--white);border:1px solid var(--paper3);border-radius:var(--r2)}
+.state-icon{font-size:48px;margin-bottom:1rem}
+.state-title{font-family:'Fraunces',serif;font-size:22px;font-weight:300;margin-bottom:.5rem}
+.state-sub{font-size:13px;color:var(--ink4);line-height:1.6;margin-bottom:1.5rem}
+.btn-primary-sm{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:10px 22px;border-radius:var(--r2);background:var(--ink);color:var(--white);border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:opacity var(--transition)}
+.btn-primary-sm:hover{opacity:.82}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.stats-bar{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:1/-1}.order-hd-left{gap:.5rem}.order-card-hd{padding:.875rem 1rem}.order-body{padding:.875rem 1rem 1rem}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Sportsstore<span class="dot"></span></div>
+  <div class="nav-sep"></div>
+  <div class="nav-links">
+    <button class="nav-link" onclick="window.location.href='index.html'">Tienda</button>
+    <button class="nav-link on">Mis pedidos</button>
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="nav-actions">
+    <div id="auth-area"></div>
+    <button class="cart-trigger" onclick="openCart()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <span class="cart-trigger-text">Carrito</span>
+      <span class="cart-n" id="cart-count">0</span>
+    </button>
+  </div>
+</nav>
+
+<div class="orders-wrap">
+  <div class="page-hd">
+    <div class="page-hd-left">
+      <h1>Mis pedidos</h1>
+      <p>Historial completo de tus compras</p>
+    </div>
+    <button class="btn-back" onclick="window.location.href='index.html'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Seguir comprando
+    </button>
+  </div>
+  <div class="stats-bar" id="stats-bar" style="display:none">
+    <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Pedidos totales</div></div>
+    <div class="stat"><div class="stat-val" id="stat-spent">S/ 0</div><div class="stat-lbl">Total gastado</div></div>
+    <div class="stat"><div class="stat-val" id="stat-last">—</div><div class="stat-lbl">Último pedido</div></div>
+  </div>
+  <div class="filter-tabs" id="filter-tabs" style="display:none">
+    <button class="tab on" onclick="filterOrders('ALL',this)">Todos</button>
+    <button class="tab" onclick="filterOrders('PAID',this)">Pagados</button>
+    <button class="tab" onclick="filterOrders('PENDING',this)">Pendientes</button>
+    <button class="tab" onclick="filterOrders('CANCELLED',this)">Cancelados</button>
+  </div>
+  <div id="orders-content"></div>
+  <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+    <button class="btn-load-more" onclick="loadMore()">Cargar más pedidos</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="overlay" id="auth-ov" onclick="overlayClick(event,'auth-ov')">
+  <div class="modal">
+    <button class="modal-x" onclick="closeOverlay('auth-ov')">×</button>
+    <div class="modal-logo">Sportsstore<span class="dot"></span></div>
+    <div id="frm-login">
+      <h2 class="modal-h">Bienvenido</h2>
+      <p class="modal-sub">Inicia sesión para ver tus pedidos.</p>
+      <div class="modal-msg err" id="le"></div>
+      <div class="fld"><label>Correo</label><input type="email" id="l-em" placeholder="tu@correo.com" autocomplete="email"></div>
+      <div class="fld"><label>Contraseña</label><input type="password" id="l-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-submit" onclick="doLogin()">Iniciar sesión</button>
+      <div class="modal-switch">¿Sin cuenta? <a onclick="switchForm('register')">Regístrate gratis</a></div>
+    </div>
+    <div id="frm-register" style="display:none">
+      <h2 class="modal-h">Crear cuenta</h2>
+      <p class="modal-sub">Únete y empieza a comprar hoy.</p>
+      <div class="modal-msg err" id="re"></div>
+      <div class="modal-msg ok" id="rs"></div>
+      <div class="fld-row">
+        <div class="fld"><label>Nombre</label><input type="text" id="r-fn" placeholder="Juan" autocomplete="given-name"></div>
+        <div class="fld"><label>Apellido</label><input type="text" id="r-ln" placeholder="Pérez" autocomplete="family-name"></div>
+      </div>
+      <div class="fld"><label>Correo</label><input type="email" id="r-em" placeholder="tu@correo.com" autocomplete="email"></div>
+      <div class="fld"><label>Contraseña</label><input type="password" id="r-pw" placeholder="Mínimo 8 caracteres" autocomplete="new-password"></div>
+      <button class="btn-submit" onclick="doRegister()">Crear cuenta</button>
+      <div class="modal-switch">¿Ya tienes cuenta? <a onclick="switchForm('login')">Iniciar sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- CART -->
+<div class="cart-bg" id="cart-bg" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-hd">
+    <div class="cart-hd-left">
+      <h3 class="cart-title">Mi carrito</h3>
+      <span class="cart-n-badge" id="cart-badge-n">0 items</span>
+    </div>
+    <button class="cart-close" onclick="closeCart()">×</button>
+  </div>
+  <div class="cart-body" id="cart-body"></div>
+  <div class="cart-ft" id="cart-ft" style="display:none">
+    <div class="cart-rows">
+      <div class="cart-row"><span>Subtotal</span><span id="ct-sub" style="font-family:'DM Mono',monospace">S/ 0.00</span></div>
+      <div class="cart-row"><span>Envío</span><span class="free-ship">Gratis 🎉</span></div>
+      <div class="cart-hr"></div>
+      <div class="cart-row total"><span>Total</span><span class="total-val" id="ct-total">S/ 0.00</span></div>
+    </div>
+    <button class="btn-checkout" onclick="doCheckout()">
+      Confirmar pedido
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <div class="secure-note">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      Pago seguro · Devolución gratis
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon" id="t-icon"></span>
+  <span id="t-msg"></span>
+</div>
+
+<!-- app.js primero (define apiFetch, token, cart, etc.) -->
+<script src="app.js"></script>
+<!-- lógica de esta página (usa apiFetch y variables de app.js) -->
+<script src="orders_logic.js"></script>
+</body>
+</html>
