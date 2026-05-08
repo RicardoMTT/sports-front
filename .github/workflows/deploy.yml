@@ -3,7 +3,7 @@ name: Deploy to Netlify
 on:
   push:
     branches:
-      - main  # Se activa al subir cambios a la rama principal
+      - master  # Se activa al subir cambios a la rama principal
 
 jobs:
   build_and_deploy:
