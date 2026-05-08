@@ -1,0 +1,18 @@
+// renderAuth — reemplaza la función en app.js
+function renderAuth() {
+  const el = document.getElementById('auth-area'); if (!el) return;
+  if (user) {
+    el.innerHTML = `
+      <div class="auth-chip">
+        <div class="dot"></div>
+        <span class="auth-chip-name">${user.firstName || 'Usuario'}</span>
+        <a href="orders.html" class="auth-chip-orders">Mis pedidos</a>
+        <button class="auth-chip-logout" onclick="logout()">salir</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <button class="nav-btn" onclick="openModal('login')" title="Iniciar sesión">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>`;
+  }
+}
