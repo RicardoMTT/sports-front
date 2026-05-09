@@ -1,18 +1,45 @@
-// renderAuth — reemplaza la función en app.js
-function renderAuth() {
-  const el = document.getElementById('auth-area'); if (!el) return;
-  if (user) {
-    el.innerHTML = `
-      <div class="auth-chip">
-        <div class="dot"></div>
-        <span class="auth-chip-name">${user.firstName || 'Usuario'}</span>
-        <a href="orders.html" class="auth-chip-orders">Mis pedidos</a>
-        <button class="auth-chip-logout" onclick="logout()">salir</button>
-      </div>`;
+// ── apiFetch ──────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  if (!token) {
+    openModal('login');
+    toast('Inicia sesión para continuar.', '🔒');
+    throw new Error('No autenticado');
+  }
+  const url = path.startsWith('http') ? path : `${API}${path}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
+  };
+  const response = await fetch(url, { ...options, headers });
+  if (response.status === 401) {
+    handleTokenExpired();
+    throw new Error('Sesión expirada');
+  }
+  return response;
+}
+
+// ── TOKEN EXPIRY ───────────────────────────────────────────────
+function handleTokenExpired() {
+  token = null; user = null; cart = [];
+  localStorage.removeItem('ss_token');
+  localStorage.removeItem('ss_user');
+  localStorage.removeItem('ss_cart');
+  renderAuth();
+  updateBadge();
+  toast('Tu sesión expiró. Inicia sesión de nuevo.', '🔒');
+
+  // Si estamos en una página protegida (orders), redirigir a index con flag
+  const isProtectedPage = window.location.pathname.includes('orders.html');
+  if (isProtectedPage) {
+    // Guardar destino para redirigir después del login
+    sessionStorage.setItem('ss_redirect', window.location.href);
+    setTimeout(() => { window.location.href = 'index.html#login'; }, 1500);
   } else {
-    el.innerHTML = `
-      <button class="nav-btn" onclick="openModal('login')" title="Iniciar sesión">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      </button>`;
+    // En index o product: mostrar modal directamente
+    setTimeout(() => {
+      openModal('login');
+      showMsg('le', 'Tu sesión ha expirado. Vuelve a iniciar sesión.', 'err');
+    }, 500);
   }
 }

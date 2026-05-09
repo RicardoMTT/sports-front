@@ -19,64 +19,165 @@ let activeFilter='ALL', activeSort='', maxPrice=300, onlyStock=false;
 let _coldTimer=null, _retryCount=0;
 const MAX_RETRY=3, COLD_DELAY=3000, FETCH_TIMEOUT=12000;
 
+// Páginas que requieren auth — redirigen a index al expirar
+const PROTECTED_PAGES = ['orders.html'];
+let _refreshing = null; // evita múltiples llamadas simultáneas al refresh
+
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   renderAuth();
   updateBadge();
   checkTokenExpiry();
+  handleRedirectAfterLogin();       // ← si venimos de una redirección por sesión expirada
   if (document.getElementById('pgrid')) loadProducts();
 });
 
-// ── apiFetch ──────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  apiFetch — wrapper central para todos los fetch autenticados
+//
+//  - Agrega Authorization: Bearer <token> automáticamente
+//  - Detecta 401 → logout automático + redirect o modal
+//  - Lanza Error('Sesión expirada') para que el caller no procese la respuesta
+// ══════════════════════════════════════════════════════════════
 async function apiFetch(path, options = {}) {
   if (!token) {
     openModal('login');
     toast('Inicia sesión para continuar.', '🔒');
     throw new Error('No autenticado');
   }
+
   const url = path.startsWith('http') ? path : `${API}${path}`;
-  const headers = { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}`, ...options.headers };
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers          // permite sobreescribir (ej: Idempotency-Key)
+  };
+
   const response = await fetch(url, { ...options, headers });
-  if (response.status === 401) { handleTokenExpired(); throw new Error('Sesión expirada'); }
+
+  if (response.status === 401) {
+    const refreshed = await tryRefresh();
+        if (refreshed) {
+          // Reintentar la petición original con el nuevo token
+          headers['Authorization'] = `Bearer ${token}`;
+          response = await fetch(url, { ...options, headers });
+          if (response.status === 401) {
+            handleTokenExpired(); throw new Error('Sesión expirada');
+          }
+        } else {
+          handleTokenExpired(); throw new Error('Sesión expirada');
+        }
+  }
+
   return response;
+}
+
+
+async function tryRefresh() {
+  const refreshToken = localStorage.getItem('ss_refresh');
+  if (!refreshToken) return false;
+
+  // Si ya hay un refresh en progreso, esperar al mismo
+  if (_refreshing) return _refreshing;
+
+  _refreshing = (async () => {
+    try {
+      const r = await fetch(`${API}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      });
+      if (!r.ok) return false;
+      const d = await r.json();
+      token = d.token;
+      localStorage.setItem('ss_token', token);
+      localStorage.setItem('ss_refresh', d.refreshToken);  // ← nuevo
+      return true;
+    } catch { return false; }
+    finally { _refreshing = null; }
+  })();
+
+  return _refreshing;
 }
 
 // ── TOKEN EXPIRY ───────────────────────────────────────────────
 function handleTokenExpired() {
-  token=null; user=null; cart=[];
+  // 1. Limpiar todo el estado local
+  token = null; user = null; cart = [];
   localStorage.removeItem('ss_token');
   localStorage.removeItem('ss_user');
   localStorage.removeItem('ss_cart');
-  renderAuth(); updateBadge();
-  toast('Tu sesión expiró. Por favor inicia sesión de nuevo.', '🔒');
-  setTimeout(() => { openModal('login'); showMsg('le','Tu sesión ha expirado. Vuelve a iniciar sesión.','err'); }, 500);
+  renderAuth();
+  updateBadge();
+
+  // 2. Avisar al usuario
+  toast('Tu sesión expiró. Inicia sesión de nuevo.', '🔒');
+
+  // 3. Decidir comportamiento según la página actual
+  const currentPage = window.location.pathname.split('/').pop();
+  const isProtected = PROTECTED_PAGES.some(p => currentPage.includes(p));
+
+  if (isProtected) {
+    // En páginas protegidas: guardar URL actual y redirigir a index
+    sessionStorage.setItem('ss_redirect', window.location.href);
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 1500);                  // 1.5s para que el usuario lea el toast
+  } else {
+    // En index o product: abrir modal directamente sin redirigir
+    setTimeout(() => {
+      openModal('login');
+      showMsg('le', 'Tu sesión ha expirado. Vuelve a iniciar sesión.', 'err');
+    }, 500);
+  }
 }
 
+// Redirigir al destino guardado después de un login exitoso
+function handleRedirectAfterLogin() {
+  const redirect = sessionStorage.getItem('ss_redirect');
+  if (redirect && token) {
+    sessionStorage.removeItem('ss_redirect');
+    window.location.href = redirect;
+  }
+}
+
+// Verificar expiración al cargar la página (sin esperar una petición)
 function checkTokenExpiry() {
   if (!token) return;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const remainingMs = payload.exp * 1000 - Date.now();
+
     if (remainingMs <= 0) {
-      token=null; user=null; cart=[];
-      localStorage.removeItem('ss_token'); localStorage.removeItem('ss_user'); localStorage.removeItem('ss_cart');
+      // Ya expiró — limpiar silenciosamente
+      token = null; user = null; cart = [];
+      localStorage.removeItem('ss_token');
+      localStorage.removeItem('ss_user');
+      localStorage.removeItem('ss_cart');
       renderAuth(); updateBadge();
       toast('Tu sesión anterior expiró. Inicia sesión de nuevo.', '🔒');
       return;
     }
-    setTimeout(() => { if (token) handleTokenExpired(); }, Math.min(remainingMs, 24*60*60*1000));
-  } catch { localStorage.removeItem('ss_token'); token=null; }
+
+    // Programar logout automático exactamente cuando expire el JWT
+    const delay = Math.min(remainingMs, 24 * 60 * 60 * 1000);
+    setTimeout(() => { if (token) handleTokenExpired(); }, delay);
+
+  } catch {
+    localStorage.removeItem('ss_token');
+    token = null;
+  }
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────
-function goToProduct(id) { window.location.href=`product.html?id=${id}`; }
+function goToProduct(id) { window.location.href = `product.html?id=${id}`; }
 function scrollToGrid() { const el=document.getElementById('grid-anchor'); if(el) el.scrollIntoView({behavior:'smooth'}); }
 
 // ── TOAST ─────────────────────────────────────────────────────
 let _tt;
 function toast(msg, icon='✓') {
   const el=document.getElementById('toast'); if(!el) return;
-  const iEl=document.getElementById('t-icon'); const mEl=document.getElementById('t-msg');
+  const iEl=document.getElementById('t-icon'), mEl=document.getElementById('t-msg');
   if(iEl) iEl.textContent=icon; if(mEl) mEl.textContent=msg;
   el.classList.add('show'); clearTimeout(_tt);
   _tt=setTimeout(()=>el.classList.remove('show'), 3200);
@@ -128,7 +229,11 @@ async function loadProducts(name='', cat='') {
       const d=await r.json();
       allProds=(d.content||d.products||(Array.isArray(d)?d:[])).map(p=>({...p,_stars:rng(3,5),_reviews:rng(18,340)}));
       success=true; _retryCount=0; break;
-    } catch { _retryCount++; if(_retryCount>MAX_RETRY) break; showColdBanner(_retryCount); await new Promise(res=>setTimeout(res,2000)); }
+    } catch {
+      _retryCount++; if(_retryCount>MAX_RETRY) break;
+      showColdBanner(_retryCount);
+      await new Promise(res=>setTimeout(res,2000));
+    }
   }
   clearTimeout(_coldTimer); _coldTimer=null;
   if(success){ hideColdBanner(); _retryCount=0; } else { loadMock(); showFallbackBanner(); }
@@ -313,9 +418,18 @@ async function doLogin(){
     const d=await r.json();if(!r.ok)throw new Error(d.message||'Credenciales incorrectas');
     token=d.token;user=d.user||{firstName:em.split('@')[0]};
     localStorage.setItem('ss_token',token);localStorage.setItem('ss_user',JSON.stringify(user));
-    checkTokenExpiry();closeOverlay('auth-ov');renderAuth();
+    checkTokenExpiry();
+    closeOverlay('auth-ov');
+    renderAuth();
     toast(`¡Bienvenido, ${user.firstName||''}!`,'👋');
-    if(typeof loadOrders==='function')loadOrders(0);
+
+    // Redirigir si venimos de una página protegida que expiró
+    const redirect=sessionStorage.getItem('ss_redirect');
+    if(redirect){ sessionStorage.removeItem('ss_redirect'); window.location.href=redirect; return; }
+
+    // Si estamos en orders.html, recargar los pedidos
+    if(typeof loadOrders==='function') loadOrders(0);
+
   }catch(e){showMsg('le',e.message);}
 }
 
