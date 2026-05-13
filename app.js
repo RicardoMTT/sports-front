@@ -1,11 +1,11 @@
 // ============================================================
-//  app.js — Sportsstore shared logic
+//  app.js — Soundstore shared logic
 //  Usado por: index.html, product.html y orders.html
 // ============================================================
 
 //const API = 'http://localhost:8080/api/v1';
 const API = 'https://sports-api-back-zd0c.onrender.com/api/v1';
-const ICONS = { FOOTWEAR:'👟', CLOTHING:'👕', EQUIPMENT:'🏋️' };
+const ICONS = { VINYL:'🎵', CD:'💿', CLOTHING:'👕', ACCESSORIES:'🎸', INSTRUMENTS:'🎹', POSTERS:'🖼️', BOOKS:'📖' };
 const fmt = n => 'S/ ' + Number(n).toFixed(2);
 const rng = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const stars = n => Array.from({length:5},(_,i)=>`<span class="star${i>=n?' off':''}">★</span>`).join('');
@@ -14,8 +14,9 @@ const stars = n => Array.from({length:5},(_,i)=>`<span class="star${i>=n?' off':
 let token = localStorage.getItem('ss_token') || null;
 let user  = JSON.parse(localStorage.getItem('ss_user') || 'null');
 let cart  = JSON.parse(localStorage.getItem('ss_cart') || '[]');
-let allProds=[], filtered=[];
-let activeFilter='ALL', activeSort='', maxPrice=300, onlyStock=false;
+let allProds=[], filtered=[], _countsCache=[];
+let activeFilter='ALL', activeSort='', maxPrice=Infinity, onlyStock=false;
+let sliderMax = 300; // se actualiza dinámicamente tras cargar productos
 let _coldTimer=null, _retryCount=0;
 const MAX_RETRY=3, COLD_DELAY=3000, FETCH_TIMEOUT=12000;
 
@@ -228,6 +229,8 @@ async function loadProducts(name='', cat='') {
       if(!r.ok) throw new Error(`HTTP ${r.status}`);
       const d=await r.json();
       allProds=(d.content||d.products||(Array.isArray(d)?d:[])).map(p=>({...p,_stars:rng(3,5),_reviews:rng(18,340)}));
+      // Guardar caché de TODOS los productos para los conteos por categoría
+      if(!name && (!cat || cat==='ALL')) _countsCache=allProds;
       success=true; _retryCount=0; break;
     } catch {
       _retryCount++; if(_retryCount>MAX_RETRY) break;
@@ -236,37 +239,64 @@ async function loadProducts(name='', cat='') {
     }
   }
   clearTimeout(_coldTimer); _coldTimer=null;
-  if(success){ hideColdBanner(); _retryCount=0; } else { loadMock(); showFallbackBanner(); }
-  updateCounts(); applyFilters();
+  if(success){ hideColdBanner(); _retryCount=0; } else { loadMock(); _countsCache=[]; showFallbackBanner(); }
+  updateCounts(); updatePriceSlider(); applyFilters();
 }
 
 function loadMock() {
   allProds=[
-    {id:1,name:'Air Sprint Pro',brand:'RunTech',price:129.99,stock:8,category:'FOOTWEAR'},
-    {id:2,name:'TrailBlazer X2',brand:'Merrell',price:159.99,stock:4,category:'FOOTWEAR'},
-    {id:3,name:'Cloud Runner Elite',brand:'On Running',price:189.99,stock:12,category:'FOOTWEAR'},
-    {id:4,name:'Speed Boost 3.0',brand:'Puma',price:109.99,stock:0,category:'FOOTWEAR'},
-    {id:5,name:'Compression Tee',brand:'Under Form',price:34.99,stock:20,category:'CLOTHING'},
-    {id:6,name:'Dry-Fit Shorts',brand:'SweatLess',price:44.99,stock:15,category:'CLOTHING'},
-    {id:7,name:'Performance Hoodie',brand:'Under Form',price:79.99,stock:7,category:'CLOTHING'},
-    {id:8,name:'Sport Socks 3pk',brand:'SweatLess',price:12.99,stock:50,category:'CLOTHING'},
-    {id:9,name:'Adjustable Power Rack',brand:'IronGrip',price:249.99,stock:2,category:'EQUIPMENT'},
-    {id:10,name:'Resistance Bands Set',brand:'FlexCore',price:19.99,stock:0,category:'EQUIPMENT'},
-    {id:11,name:'Foam Roller Pro',brand:'RecoverX',price:29.99,stock:11,category:'EQUIPMENT'},
-    {id:12,name:'Speed Jump Rope',brand:'SpeedLine',price:14.99,stock:30,category:'EQUIPMENT'},
+    {id:1,name:'The Dark Side of the Moon',brand:'Pink Floyd',price:29.99,stock:6,category:'VINYL'},
+    {id:2,name:'Abbey Road',brand:'The Beatles',price:27.99,stock:3,category:'VINYL'},
+    {id:3,name:'Led Zeppelin IV',brand:'Led Zeppelin',price:28.99,stock:10,category:'VINYL'},
+    {id:4,name:'Nevermind',brand:'Nirvana',price:14.99,stock:0,category:'CD'},
+    {id:5,name:'OK Computer',brand:'Radiohead',price:13.99,stock:18,category:'CD'},
+    {id:6,name:'Black Album Tour Tee',brand:'Metallica',price:34.99,stock:12,category:'CLOTHING'},
+    {id:7,name:'Dark Side Hoodie',brand:'Pink Floyd',price:59.99,stock:5,category:'CLOTHING'},
+    {id:8,name:'Guitar Pick Set 12pcs',brand:'Dunlop',price:8.99,stock:22,category:'ACCESSORIES'},
+    {id:9,name:'Leather Guitar Strap',brand:"Levy's",price:45.99,stock:4,category:'ACCESSORIES'},
+    {id:10,name:'Acoustic Guitar',brand:'Fender',price:299.99,stock:0,category:'INSTRUMENTS'},
+    {id:11,name:'Nevermind Poster A2',brand:'Nirvana',price:12.99,stock:8,category:'POSTERS'},
+    {id:12,name:'Guitar for Beginners',brand:'Hal Leonard',price:24.99,stock:25,category:'BOOKS'},
   ].map(p=>({...p,_stars:rng(3,5),_reviews:rng(15,280)}));
 }
 
+// Ajusta el slider al precio más alto de los productos cargados
+function updatePriceSlider() {
+  const sl  = document.getElementById('price-slider');
+  const lbl = document.getElementById('price-lbl');
+  if (!sl || !allProds.length) return;
+
+  const highest = Math.max(...allProds.map(p => p.price));
+  const newMax  = Math.ceil(highest / 50) * 50;  // redondea al siguiente múltiplo de 50
+
+  if (newMax !== sliderMax) {
+    sliderMax = newMax;
+    maxPrice  = Infinity;  // resetear filtro al cambiar el rango
+    sl.max    = sliderMax;
+    sl.value  = sliderMax;
+    if (lbl) lbl.textContent = fmt(sliderMax);
+  }
+}
+
 function updateCounts() {
+  // Usar la caché de todos los productos para los conteos;
+  // si aún no existe (primera carga fallida), usar allProds como fallback
+  const src = _countsCache.length ? _countsCache : allProds;
   const safe=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
-  safe('cnt-all',allProds.length); safe('cnt-fw',allProds.filter(p=>p.category==='FOOTWEAR').length);
-  safe('cnt-cl',allProds.filter(p=>p.category==='CLOTHING').length); safe('cnt-eq',allProds.filter(p=>p.category==='EQUIPMENT').length);
+  safe('cnt-all',src.length);
+  safe('cnt-vinyl',src.filter(p=>p.category==='VINYL').length);
+  safe('cnt-cd',src.filter(p=>p.category==='CD').length);
+  safe('cnt-cl',src.filter(p=>p.category==='CLOTHING').length);
+  safe('cnt-acc',src.filter(p=>p.category==='ACCESSORIES').length);
+  safe('cnt-inst',src.filter(p=>p.category==='INSTRUMENTS').length);
+  safe('cnt-post',src.filter(p=>p.category==='POSTERS').length);
+  safe('cnt-book',src.filter(p=>p.category==='BOOKS').length);
 }
 
 function applyFilters() {
   let res=[...allProds];
   if(onlyStock) res=res.filter(p=>p.stock>0);
-  if(maxPrice<300) res=res.filter(p=>p.price<=maxPrice);
+  if(maxPrice<Infinity) res=res.filter(p=>p.price<=maxPrice);
   if(activeSort==='price-asc') res.sort((a,b)=>a.price-b.price);
   else if(activeSort==='price-desc') res.sort((a,b)=>b.price-a.price);
   else if(activeSort==='name') res.sort((a,b)=>a.name.localeCompare(b.name));
@@ -315,23 +345,40 @@ function renderGrid(prods) {
 // ── FILTERS ───────────────────────────────────────────────────
 function setFilter(cat,el,isMobile=false){activeFilter=cat;const listId=isMobile?'cat-list-m':'cat-list';document.querySelectorAll(`#${listId} .cat-opt`).forEach(c=>c.classList.remove('on'));el.classList.add('on');const si=document.getElementById('search-in');if(si)si.value='';loadProducts('',cat);if(isMobile)closeSheet();}
 function onSort(v){activeSort=v;applyFilters();}
-function onPrice(v){maxPrice=+v;document.getElementById('price-lbl').textContent=`S/ ${v}`;applyFilters();}
-function onStockToggle(){const d=document.getElementById('stock-toggle'),m=document.getElementById('stock-toggle-m');onlyStock=(d&&d.checked)||(m&&m.checked);if(d)d.checked=onlyStock;if(m)m.checked=onlyStock;applyFilters();}
+function onPrice(v){
+  const val = +v;
+  // Si el slider está al máximo, no hay filtro activo
+  maxPrice = (val >= sliderMax) ? Infinity : val;
+  document.getElementById('price-lbl').textContent = fmt(val);
+  applyFilters();
+}
+function toggleStock(){
+  onlyStock = !onlyStock;
+  // Sincronizar ambos toggles (sidebar desktop + sheet móvil)
+  ['toggle-track-v','toggle-track-v-m'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('on',onlyStock);
+  });
+  ['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('on',onlyStock);
+  });
+  applyFilters();
+}
+function onStockToggle(){toggleStock();}
 function toggleSz(el){el.classList.toggle('on');}
 let _st;
 function onSearch(v){clearTimeout(_st);_st=setTimeout(()=>{v.length>1?loadProducts(v,''):loadProducts('',activeFilter);},380);}
 
 // ── CHIPS ─────────────────────────────────────────────────────
-const CAT_NAMES={ALL:'Todos',FOOTWEAR:'Calzado',CLOTHING:'Ropa',EQUIPMENT:'Equipamiento'};
+const CAT_NAMES={ALL:'Todos',VINYL:'Vinilos',CD:'CDs',CLOTHING:'Ropa & Merch',ACCESSORIES:'Accesorios',INSTRUMENTS:'Instrumentos',POSTERS:'Posters',BOOKS:'Libros'};
 let _chips=[];
 function renderChips(){
   const row=document.getElementById('chips-row');if(!row)return;_chips=[];
   if(activeFilter!=='ALL')_chips.push({label:CAT_NAMES[activeFilter],clear:()=>{activeFilter='ALL';document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}});
-  if(onlyStock)_chips.push({label:'En stock',clear:()=>{onlyStock=false;['stock-toggle','stock-toggle-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});applyFilters();}});
-  if(maxPrice<300)_chips.push({label:`Precio ≤ ${fmt(maxPrice)}`,clear:()=>{maxPrice=300;const sl=document.getElementById('price-slider');if(sl)sl.value=300;document.getElementById('price-lbl').textContent='S/ 300';applyFilters();}});
+  if(onlyStock)_chips.push({label:'En stock',clear:()=>{onlyStock=false;['toggle-track-v','toggle-track-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});applyFilters();}});
+  if(maxPrice<Infinity)_chips.push({label:`Precio ≤ ${fmt(maxPrice)}`,clear:()=>{maxPrice=Infinity;const sl=document.getElementById('price-slider');if(sl)sl.value=sliderMax;const pl=document.getElementById('price-lbl');if(pl)pl.textContent=fmt(sliderMax);applyFilters();}});
   row.innerHTML=_chips.length?_chips.map((c,i)=>`<div class="chip">${c.label}<button class="chip-x" onclick="_chips[${i}].clear()">×</button></div>`).join('')+`<button class="clear-btn" onclick="clearAll()">Limpiar todo</button>`:'';
 }
-function clearAll(){activeFilter='ALL';onlyStock=false;maxPrice=300;activeSort='';const sl=document.getElementById('price-slider');if(sl)sl.value=300;const pl=document.getElementById('price-lbl');if(pl)pl.textContent='S/ 300';['stock-toggle','stock-toggle-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}
+function clearAll(){activeFilter='ALL';onlyStock=false;maxPrice=Infinity;activeSort='';const sl=document.getElementById('price-slider');if(sl)sl.value=sliderMax;const pl=document.getElementById('price-lbl');if(pl)pl.textContent=fmt(sliderMax);['toggle-track-v','toggle-track-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['stock-toggle','stock-toggle-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}
 
 // ── MOBILE SHEET ──────────────────────────────────────────────
 function openSheet(){document.getElementById('sheet-bg').classList.add('open');document.getElementById('filter-sheet').classList.add('open');}
@@ -371,14 +418,69 @@ function chgCartQty(id,d){
   else apiFetch(`/shopping/cart/items/${id}`,{method:'DELETE'}).catch(()=>{});
 }
 function removeItem(id){cart=cart.filter(i=>i.id!==id);updateBadge();renderCart();toast('Producto eliminado','🗑️');apiFetch(`/shopping/cart/items/${id}`,{method:'DELETE'}).catch(()=>{});}
-async function doCheckout(){
+// ── CHECKOUT — 2 pasos: confirmación + loading ──────────────
+
+// Paso 1: abrir modal de confirmación con resumen
+function doCheckout(){
   if(!token){closeCart();openModal('login');return;}
   if(!cart.length){toast('Tu carrito está vacío','⚠️');return;}
+
+  // Renderizar items en el modal
+  const total = cart.reduce((s,i)=>s+i.price*i.qty, 0);
+  document.getElementById('confirm-items').innerHTML = cart.map(i=>`
+    <div class="confirm-item">
+      <div class="confirm-item-left">
+        <span class="confirm-item-icon">${ICONS[i.cat]||'📦'}</span>
+        <div>
+          <div class="confirm-item-name">${i.name}</div>
+          <div class="confirm-item-qty">${i.qty} unidad${i.qty>1?'es':''} × ${fmt(i.price)}</div>
+        </div>
+      </div>
+      <span class="confirm-item-price">${fmt(i.price*i.qty)}</span>
+    </div>`).join('');
+  document.getElementById('confirm-total').textContent = fmt(total);
+
+  // Resetear estado del botón
+  const btn = document.getElementById('btn-confirm-ok');
+  if(btn){ btn.classList.remove('loading'); btn.disabled = false; }
+
+  // Abrir modal
+  document.getElementById('confirm-ov').classList.add('open');
+}
+
+function cancelCheckout(e){
+  if(!e || e.target===document.getElementById('confirm-ov')) closeConfirm();
+}
+function closeConfirm(){
+  document.getElementById('confirm-ov').classList.remove('open');
+}
+
+// Paso 2: confirmar y procesar con loading
+async function confirmCheckout(){
+  const btn = document.getElementById('btn-confirm-ok');
+
+  // Activar estado loading
+  btn.classList.add('loading');
+  btn.disabled = true;
+
   try{
-    const r=await apiFetch('/shopping/checkout',{method:'POST',headers:{'Idempotency-Key':`ck-${Date.now()}-${Math.random().toString(36).slice(2)}`}});
-    const d=await r.json();if(!r.ok)throw new Error(d.message||'Error al procesar el pedido');
-    cart=[];updateBadge();closeCart();toast(`¡Pedido confirmado! 🎉 Orden #${d.orderId}`,'🎉');
-  }catch(e){if(e.message!=='Sesión expirada')toast(`Error: ${e.message}`,'⚠️');}
+    const r = await apiFetch('/shopping/checkout',{
+      method:'POST',
+      headers:{'Idempotency-Key':`ck-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.message||'Error al procesar el pedido');
+
+    // Éxito
+    cart=[]; updateBadge(); closeConfirm(); closeCart();
+    toast(`¡Pedido confirmado! 🎉 Orden #${d.orderId}`,'🎉');
+
+  }catch(e){
+    // Restaurar botón
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    if(e.message!=='Sesión expirada') toast(`Error: ${e.message}`,'⚠️');
+  }
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
@@ -413,6 +515,8 @@ function showMsg(id,txt,type){const el=document.getElementById(id);if(!el)return
 async function doLogin(){
   const em=document.getElementById('l-em').value.trim(),pw=document.getElementById('l-pw').value;
   if(!em||!pw){showMsg('le','Completa todos los campos');return;}
+  const btn=document.getElementById('btn-login');
+  if(btn){btn.classList.add('loading');btn.disabled=true;}
   try{
     const r=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})});
     const d=await r.json();if(!r.ok)throw new Error(d.message||'Credenciales incorrectas');
@@ -422,27 +526,26 @@ async function doLogin(){
     closeOverlay('auth-ov');
     renderAuth();
     toast(`¡Bienvenido, ${user.firstName||''}!`,'👋');
-
-    // Redirigir si venimos de una página protegida que expiró
     const redirect=sessionStorage.getItem('ss_redirect');
     if(redirect){ sessionStorage.removeItem('ss_redirect'); window.location.href=redirect; return; }
-
-    // Si estamos en orders.html, recargar los pedidos
     if(typeof loadOrders==='function') loadOrders(0);
-
   }catch(e){showMsg('le',e.message);}
+  finally{if(btn){btn.classList.remove('loading');btn.disabled=false;}}
 }
 
 async function doRegister(){
   const fn=document.getElementById('r-fn').value.trim(),ln=document.getElementById('r-ln').value.trim();
   const em=document.getElementById('r-em').value.trim(),pw=document.getElementById('r-pw').value;
   if(!fn||!ln||!em||!pw){showMsg('re','Completa todos los campos');return;}
+  const btn=document.getElementById('btn-register');
+  if(btn){btn.classList.add('loading');btn.disabled=true;}
   try{
     const r=await fetch(`${API}/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({firstName:fn,lastName:ln,email:em,password:pw})});
     const d=await r.json();if(!r.ok)throw new Error(d.message||'Error al registrar');
     showMsg('rs','¡Cuenta creada! Ahora inicia sesión.','ok');
     setTimeout(()=>switchForm('login'),1800);
   }catch(e){showMsg('re',e.message);}
+  finally{if(btn){btn.classList.remove('loading');btn.disabled=false;}}
 }
 
 function logout(){
