@@ -520,7 +520,11 @@ async function doLogin(){
   try{
     const r=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})});
     const d=await r.json();if(!r.ok)throw new Error(d.message||'Credenciales incorrectas');
-    token=d.token;user=d.user||{firstName:em.split('@')[0]};
+    token=d.token;
+    user=d.user||{};
+    // Garantizar que el email siempre esté guardado en el objeto user
+    if(!user.email) user.email=em;
+    if(!user.firstName) user.firstName=em.split('@')[0];
     localStorage.setItem('ss_token',token);localStorage.setItem('ss_user',JSON.stringify(user));
     checkTokenExpiry();
     closeOverlay('auth-ov');
