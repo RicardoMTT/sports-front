@@ -21,7 +21,7 @@ let _coldTimer=null, _retryCount=0;
 const MAX_RETRY=3, COLD_DELAY=3000, FETCH_TIMEOUT=12000;
 
 // Páginas que requieren auth — redirigen a index al expirar
-const PROTECTED_PAGES = ['orders.html'];
+const PROTECTED_PAGES = ['orders.html', 'profile.html'];
 let _refreshing = null; // evita múltiples llamadas simultáneas al refresh
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -54,20 +54,20 @@ async function apiFetch(path, options = {}) {
     ...options.headers          // permite sobreescribir (ej: Idempotency-Key)
   };
 
-  const response = await fetch(url, { ...options, headers });
+  let response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
     const refreshed = await tryRefresh();
-        if (refreshed) {
-          // Reintentar la petición original con el nuevo token
-          headers['Authorization'] = `Bearer ${token}`;
-          response = await fetch(url, { ...options, headers });
-          if (response.status === 401) {
-            handleTokenExpired(); throw new Error('Sesión expirada');
-          }
-        } else {
-          handleTokenExpired(); throw new Error('Sesión expirada');
-        }
+    if (refreshed) {
+      // Reintentar la petición original con el nuevo token
+      headers['Authorization'] = `Bearer ${token}`;
+      response = await fetch(url, { ...options, headers });
+      if (response.status === 401) {
+        handleTokenExpired(); throw new Error('Sesión expirada');
+      }
+    } else {
+      handleTokenExpired(); throw new Error('Sesión expirada');
+    }
   }
 
   return response;
@@ -106,6 +106,7 @@ function handleTokenExpired() {
   // 1. Limpiar todo el estado local
   token = null; user = null; cart = [];
   localStorage.removeItem('ss_token');
+  localStorage.removeItem('ss_refresh');
   localStorage.removeItem('ss_user');
   localStorage.removeItem('ss_cart');
   renderAuth();
@@ -223,12 +224,13 @@ async function loadProducts(name='', cat='') {
   while (_retryCount<=MAX_RETRY) {
     try {
       let url=`${API}/products?size=24`;
-      if(name) url=`${API}/products?name=${encodeURIComponent(name)}&size=24`;
+      if(name && cat && cat!=='ALL') url=`${API}/products?name=${encodeURIComponent(name)}&category=${cat}&size=24`;
+      else if(name) url=`${API}/products?name=${encodeURIComponent(name)}&size=24`;
       else if(cat&&cat!=='ALL') url=`${API}/products?category=${cat}&size=24`;
       const r=await fetch(url,{signal:AbortSignal.timeout(FETCH_TIMEOUT)});
       if(!r.ok) throw new Error(`HTTP ${r.status}`);
       const d=await r.json();
-      allProds=(d.content||d.products||(Array.isArray(d)?d:[])).map(p=>({...p,_stars:rng(3,5),_reviews:rng(18,340)}));
+      allProds=(d.content||d.products||(Array.isArray(d)?d:[])).filter(p=>p&&p.name&&String(p.name).trim()!=='').map(p=>({...p,_stars:rng(3,5),_reviews:rng(18,340)}));
       // Guardar caché de TODOS los productos para los conteos por categoría
       if(!name && (!cat || cat==='ALL')) _countsCache=allProds;
       success=true; _retryCount=0; break;
@@ -279,18 +281,28 @@ function updatePriceSlider() {
 }
 
 function updateCounts() {
-  // Usar la caché de todos los productos para los conteos;
-  // si aún no existe (primera carga fallida), usar allProds como fallback
   const src = _countsCache.length ? _countsCache : allProds;
   const safe=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  const count=cat=>src.filter(p=>p.category===cat).length;
   safe('cnt-all',src.length);
-  safe('cnt-vinyl',src.filter(p=>p.category==='VINYL').length);
-  safe('cnt-cd',src.filter(p=>p.category==='CD').length);
-  safe('cnt-cl',src.filter(p=>p.category==='CLOTHING').length);
-  safe('cnt-acc',src.filter(p=>p.category==='ACCESSORIES').length);
-  safe('cnt-inst',src.filter(p=>p.category==='INSTRUMENTS').length);
-  safe('cnt-post',src.filter(p=>p.category==='POSTERS').length);
-  safe('cnt-book',src.filter(p=>p.category==='BOOKS').length);
+  safe('cnt-vinyl',count('VINYL'));
+  safe('cnt-cd',count('CD'));
+  safe('cnt-cl',count('CLOTHING'));
+  safe('cnt-acc',count('ACCESSORIES'));
+  safe('cnt-inst',count('INSTRUMENTS'));
+  safe('cnt-post',count('POSTERS'));
+  safe('cnt-book',count('BOOKS'));
+  // Actualizar strip de categorías
+  safe('cc-all',src.length);
+  safe('cc-vinyl',count('VINYL')||'');
+  safe('cc-cd',count('CD')||'');
+  safe('cc-cl',count('CLOTHING')||'');
+  safe('cc-acc',count('ACCESSORIES')||'');
+  safe('cc-inst',count('INSTRUMENTS')||'');
+  safe('cc-post',count('POSTERS')||'');
+  safe('cc-book',count('BOOKS')||'');
+  // Actualizar stat del hero
+  safe('hero-total',src.length);
 }
 
 function applyFilters() {
@@ -313,20 +325,22 @@ function renderSkeleton() {
 
 function renderGrid(prods) {
   const g=document.getElementById('pgrid'); if(!g) return;
-  if(!prods.length){g.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">Prueba con otros filtros o una búsqueda diferente.</div></div>`;return;}
+  if(!prods.length){g.innerHTML=`<div class="empty"><div class="empty-icon">🎵</div><div class="empty-title">Sin resultados</div><div class="empty-sub">Prueba con otros filtros o una búsqueda diferente.</div></div>`;return;}
   g.innerHTML=prods.map(p=>{
-    const low=p.stock>0&&p.stock<=3, isNew=p.id%5===0, isSale=p.id%4===0;
+    const low=p.stock>0&&p.stock<=3, isNew=p.id%7===0, isSale=p.id%5===0;
     let badge='';
     if(!p.stock) badge=`<div class="badge badge-out">Agotado</div>`;
     else if(low) badge=`<div class="badge badge-low">⚡ Últimas ${p.stock}</div>`;
     else if(isNew) badge=`<div class="badge badge-new">Nuevo</div>`;
     else if(isSale) badge=`<div class="badge badge-sale">Oferta</div>`;
+    const catClass='cat-'+(p.category||'').toLowerCase();
+    const catLabel=CAT_DISPLAY[p.category]||p.category||'';
     return `<div class="pcard" onclick="goToProduct(${p.id})" style="cursor:pointer">
       ${badge}
-      <div class="pcard-img"><span>${ICONS[p.category]||'📦'}</span></div>
+      <div class="pcard-img"><span>${ICONS[p.category]||'🎵'}</span></div>
       <button class="wish-btn" onclick="event.stopPropagation();toast('Guardado en favoritos','❤️')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button>
       <div class="pcard-body">
-        <div class="pcard-cat">${p.category}</div>
+        <div class="pcard-cat ${catClass}">${catLabel}</div>
         <div class="pcard-name">${p.name}</div>
         <div class="pcard-brand">${p.brand}</div>
         <div class="pcard-stars"><div class="stars">${stars(p._stars)}</div><span class="review-n">(${p._reviews})</span></div>
@@ -334,7 +348,7 @@ function renderGrid(prods) {
         <div class="pcard-foot">
           <div class="pcard-price">${fmt(p.price)}</div>
           ${p.stock>0
-            ?`<button class="add-btn" onclick="addToCart(event,${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},'${p.category}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar</button>`
+            ?`<button class="add-btn" onclick="addToCart(event,${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},'${p.category}')">+ Agregar</button>`
             :`<span class="out-txt">Agotado</span>`}
         </div>
       </div>
@@ -366,19 +380,34 @@ function toggleStock(){
 function onStockToggle(){toggleStock();}
 function toggleSz(el){el.classList.toggle('on');}
 let _st;
-function onSearch(v){clearTimeout(_st);_st=setTimeout(()=>{v.length>1?loadProducts(v,''):loadProducts('',activeFilter);},380);}
+function onSearch(v){clearTimeout(_st);_st=setTimeout(()=>{v.length>1?loadProducts(v,activeFilter):loadProducts('',activeFilter);},380);}
 
 // ── CHIPS ─────────────────────────────────────────────────────
-const CAT_NAMES={ALL:'Todos',VINYL:'Vinilos',CD:'CDs',CLOTHING:'Ropa & Merch',ACCESSORIES:'Accesorios',INSTRUMENTS:'Instrumentos',POSTERS:'Posters',BOOKS:'Libros'};
+const CAT_NAMES={ALL:'Todos',VINYL:'Vinilos',CD:'CDs',CLOTHING:'Ropa & Merch',ACCESSORIES:'Accesorios',INSTRUMENTS:'Instrumentos',POSTERS:'Pósters',BOOKS:'Libros',FOOTWEAR:'Vinilos',EQUIPMENT:'Accesorios'};
+const CAT_DISPLAY={VINYL:'Vinilo',CD:'CD',CLOTHING:'Ropa & Merch',ACCESSORIES:'Accesorio',INSTRUMENTS:'Instrumento',POSTERS:'Póster',POSTER:'Póster',BOOKS:'Libro',FOOTWEAR:'Vinilo',EQUIPMENT:'Accesorio'};
 let _chips=[];
 function renderChips(){
   const row=document.getElementById('chips-row');if(!row)return;_chips=[];
-  if(activeFilter!=='ALL')_chips.push({label:CAT_NAMES[activeFilter],clear:()=>{activeFilter='ALL';document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}});
+  if(activeFilter!=='ALL')_chips.push({label:CAT_NAMES[activeFilter],clear:()=>{activeFilter='ALL';document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));document.querySelectorAll('#cat-strip .cat-card').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}});
   if(onlyStock)_chips.push({label:'En stock',clear:()=>{onlyStock=false;['toggle-track-v','toggle-track-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});applyFilters();}});
   if(maxPrice<Infinity)_chips.push({label:`Precio ≤ ${fmt(maxPrice)}`,clear:()=>{maxPrice=Infinity;const sl=document.getElementById('price-slider');if(sl)sl.value=sliderMax;const pl=document.getElementById('price-lbl');if(pl)pl.textContent=fmt(sliderMax);applyFilters();}});
   row.innerHTML=_chips.length?_chips.map((c,i)=>`<div class="chip">${c.label}<button class="chip-x" onclick="_chips[${i}].clear()">×</button></div>`).join('')+`<button class="clear-btn" onclick="clearAll()">Limpiar todo</button>`:'';
 }
-function clearAll(){activeFilter='ALL';onlyStock=false;maxPrice=Infinity;activeSort='';const sl=document.getElementById('price-slider');if(sl)sl.value=sliderMax;const pl=document.getElementById('price-lbl');if(pl)pl.textContent=fmt(sliderMax);['toggle-track-v','toggle-track-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['stock-toggle','stock-toggle-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}
+function clearAll(){activeFilter='ALL';onlyStock=false;maxPrice=Infinity;activeSort='';const sl=document.getElementById('price-slider');if(sl)sl.value=sliderMax;const pl=document.getElementById('price-lbl');if(pl)pl.textContent=fmt(sliderMax);['toggle-track-v','toggle-track-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['toggle-thumb-v','toggle-thumb-v-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on');});['stock-toggle','stock-toggle-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});document.querySelectorAll('#cat-list .cat-opt,#cat-list-m .cat-opt').forEach((c,i)=>c.classList.toggle('on',i===0));document.querySelectorAll('#cat-strip .cat-card').forEach((c,i)=>c.classList.toggle('on',i===0));loadProducts('','ALL');}
+
+// ── CATEGORY STRIP ────────────────────────────────────────────
+function setStripFilter(cat, el) {
+  document.querySelectorAll('#cat-strip .cat-card').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+  // Sincronizar sidebar
+  document.querySelectorAll('#cat-list .cat-opt').forEach(c=>c.classList.remove('on'));
+  const match=document.querySelector(`#cat-list .cat-opt[data-cat="${cat}"]`);
+  if(match) match.classList.add('on'); else {const first=document.querySelector('#cat-list .cat-opt');if(first)first.classList.add('on');}
+  activeFilter=cat;
+  const si=document.getElementById('search-in');if(si)si.value='';
+  loadProducts('',cat);
+  const anchor=document.getElementById('grid-anchor');if(anchor)anchor.scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 // ── MOBILE SHEET ──────────────────────────────────────────────
 function openSheet(){document.getElementById('sheet-bg').classList.add('open');document.getElementById('filter-sheet').classList.add('open');}
@@ -397,7 +426,9 @@ function addToCart(e,id,name,price,cat,qty=1){
   const ex=cart.find(i=>i.id===id);
   if(ex)ex.qty+=qty;else cart.push({id,name,price,cat,qty});
   updateBadge(); toast(`${name} agregado al carrito`,'✓');
-  apiFetch('/shopping/cart/items',{method:'POST',body:JSON.stringify({productId:id,quantity:ex?ex.qty:qty})}).catch(()=>{});
+  // Siempre se envía solo el incremento (qty), nunca el total acumulado local.
+  // El backend hace: item.quantity += request.quantity — por eso mandamos solo lo nuevo.
+  apiFetch('/shopping/cart/items',{method:'POST',body:JSON.stringify({productId:id,quantity:qty})}).catch(()=>{});
 }
 function openCart(){document.getElementById('cart-bg').classList.add('open');document.getElementById('cart-panel').classList.add('open');renderCart();}
 function closeCart(){document.getElementById('cart-bg').classList.remove('open');document.getElementById('cart-panel').classList.remove('open');}
@@ -492,6 +523,7 @@ function renderAuth(){
         <div class="dot"></div>
         <span class="auth-chip-name">${user.firstName||'Usuario'}</span>
         <a href="orders.html" class="auth-chip-orders">Mis pedidos</a>
+        <a href="profile.html" class="auth-chip-orders">Perfil</a>
         <button class="auth-chip-logout" onclick="logout()">salir</button>
       </div>`;
   }else{
@@ -525,7 +557,9 @@ async function doLogin(){
     // Garantizar que el email siempre esté guardado en el objeto user
     if(!user.email) user.email=em;
     if(!user.firstName) user.firstName=em.split('@')[0];
-    localStorage.setItem('ss_token',token);localStorage.setItem('ss_user',JSON.stringify(user));
+    localStorage.setItem('ss_token',token);
+    localStorage.setItem('ss_refresh',d.refreshToken||'');
+    localStorage.setItem('ss_user',JSON.stringify(user));
     checkTokenExpiry();
     closeOverlay('auth-ov');
     renderAuth();
@@ -553,7 +587,16 @@ async function doRegister(){
 }
 
 function logout(){
+  // Revocar el refresh token en el backend antes de limpiar el estado local.
+  // El token aún está en memoria en este punto, así que apiFetch puede enviarlo.
+  // Si falla (red caída, token ya expirado), se ignora silenciosamente —
+  // el usuario igual queda deslogueado en el frontend.
+  apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
+
   token=null;user=null;cart=[];
-  localStorage.removeItem('ss_token');localStorage.removeItem('ss_user');localStorage.removeItem('ss_cart');
+  localStorage.removeItem('ss_token');
+  localStorage.removeItem('ss_refresh');
+  localStorage.removeItem('ss_user');
+  localStorage.removeItem('ss_cart');
   renderAuth();updateBadge();toast('Sesión cerrada','👋');
 }

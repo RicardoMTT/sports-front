@@ -38,15 +38,74 @@
   <div class="hero-content">
     <div class="hero-tag">Colección 2026</div>
     <h1 class="hero-title">Descubre el sonido<br><em>que te define.</em></h1>
-    <button class="hero-cta" onclick="scrollToGrid()">
-      Explorar colección
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </button>
+    <p class="hero-sub">Vinilos, CDs, merch de bandas y accesorios para melómanos. Envío gratis desde S/ 100.</p>
+    <div class="hero-actions">
+      <button class="hero-cta" onclick="scrollToGrid()">
+        Explorar colección
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-val" id="hero-total">—</div>
+          <div class="hero-stat-lbl">Títulos</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val">7</div>
+          <div class="hero-stat-lbl">Categorías</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="hero-visual">
     <div class="hero-icon">🎵</div>
     <div class="hero-icon">🎸</div>
     <div class="hero-icon">🎶</div>
+  </div>
+</div>
+
+<!-- CATEGORY STRIP -->
+<div class="cat-strip-outer">
+  <div class="cat-strip" id="cat-strip">
+    <div class="cat-card on" onclick="setStripFilter('ALL',this)">
+      <div class="cat-card-icon">🎵</div>
+      <div class="cat-card-name">Todo</div>
+      <div class="cat-card-count" id="cc-all">—</div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('VINYL',this)">
+      <div class="cat-card-icon">💿</div>
+      <div class="cat-card-name">Vinilos</div>
+      <div class="cat-card-count" id="cc-vinyl"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('CD',this)">
+      <div class="cat-card-icon">📀</div>
+      <div class="cat-card-name">CDs</div>
+      <div class="cat-card-count" id="cc-cd"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('CLOTHING',this)">
+      <div class="cat-card-icon">👕</div>
+      <div class="cat-card-name">Ropa & Merch</div>
+      <div class="cat-card-count" id="cc-cl"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('ACCESSORIES',this)">
+      <div class="cat-card-icon">🎸</div>
+      <div class="cat-card-name">Accesorios</div>
+      <div class="cat-card-count" id="cc-acc"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('INSTRUMENTS',this)">
+      <div class="cat-card-icon">🎹</div>
+      <div class="cat-card-name">Instrumentos</div>
+      <div class="cat-card-count" id="cc-inst"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('POSTERS',this)">
+      <div class="cat-card-icon">🖼️</div>
+      <div class="cat-card-name">Pósters</div>
+      <div class="cat-card-count" id="cc-post"></div>
+    </div>
+    <div class="cat-card" onclick="setStripFilter('BOOKS',this)">
+      <div class="cat-card-icon">📖</div>
+      <div class="cat-card-name">Libros</div>
+      <div class="cat-card-count" id="cc-book"></div>
+    </div>
   </div>
 </div>
 
@@ -56,14 +115,14 @@
     <div class="filter-block">
       <div class="filter-block-title">Categoría</div>
       <div id="cat-list">
-        <div class="cat-opt on" onclick="setFilter('ALL',this)"><div class="radio"></div>Todos<span class="cat-count" id="cnt-all"></span></div>
-        <div class="cat-opt" onclick="setFilter('VINYL',this)"><div class="radio"></div>🎵 Vinilos<span class="cat-count" id="cnt-vinyl"></span></div>
-        <div class="cat-opt" onclick="setFilter('CD',this)"><div class="radio"></div>💿 CDs<span class="cat-count" id="cnt-cd"></span></div>
-        <div class="cat-opt" onclick="setFilter('CLOTHING',this)"><div class="radio"></div>👕 Ropa & Merch<span class="cat-count" id="cnt-cl"></span></div>
-        <div class="cat-opt" onclick="setFilter('ACCESSORIES',this)"><div class="radio"></div>🎸 Accesorios<span class="cat-count" id="cnt-acc"></span></div>
-        <div class="cat-opt" onclick="setFilter('INSTRUMENTS',this)"><div class="radio"></div>🎹 Instrumentos<span class="cat-count" id="cnt-inst"></span></div>
-        <div class="cat-opt" onclick="setFilter('POSTERS',this)"><div class="radio"></div>🖼️ Posters<span class="cat-count" id="cnt-post"></span></div>
-        <div class="cat-opt" onclick="setFilter('BOOKS',this)"><div class="radio"></div>📖 Libros<span class="cat-count" id="cnt-book"></span></div>
+        <div class="cat-opt on" data-cat="ALL" onclick="setFilter('ALL',this)"><div class="radio"></div>Todos<span class="cat-count" id="cnt-all"></span></div>
+        <div class="cat-opt" data-cat="VINYL" onclick="setFilter('VINYL',this)"><div class="radio"></div>💿 Vinilos<span class="cat-count" id="cnt-vinyl"></span></div>
+        <div class="cat-opt" data-cat="CD" onclick="setFilter('CD',this)"><div class="radio"></div>📀 CDs<span class="cat-count" id="cnt-cd"></span></div>
+        <div class="cat-opt" data-cat="CLOTHING" onclick="setFilter('CLOTHING',this)"><div class="radio"></div>👕 Ropa & Merch<span class="cat-count" id="cnt-cl"></span></div>
+        <div class="cat-opt" data-cat="ACCESSORIES" onclick="setFilter('ACCESSORIES',this)"><div class="radio"></div>🎸 Accesorios<span class="cat-count" id="cnt-acc"></span></div>
+        <div class="cat-opt" data-cat="INSTRUMENTS" onclick="setFilter('INSTRUMENTS',this)"><div class="radio"></div>🎹 Instrumentos<span class="cat-count" id="cnt-inst"></span></div>
+        <div class="cat-opt" data-cat="POSTERS" onclick="setFilter('POSTERS',this)"><div class="radio"></div>🖼️ Pósters<span class="cat-count" id="cnt-post"></span></div>
+        <div class="cat-opt" data-cat="BOOKS" onclick="setFilter('BOOKS',this)"><div class="radio"></div>📖 Libros<span class="cat-count" id="cnt-book"></span></div>
       </div>
     </div>
     <div class="sdiv"></div>
@@ -316,10 +375,10 @@
 <!-- COLD START BANNER -->
 <div class="cold-banner" id="cold-banner"></div>
 
-<div class="toast" id="toast">
-  <span class="toast-icon" id="t-icon"></span>
-  <span id="t-msg"></span>
-</div>
+<!--<div class="toast" id="toast">-->
+<!--  <span class="toast-icon" id="t-icon"></span>-->
+<!--  <span id="t-msg"></span>-->
+<!--</div>-->
 
 <script src="app.js"></script>
 </body>

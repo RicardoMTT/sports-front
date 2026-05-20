@@ -244,7 +244,10 @@ function renderError(msg) {
 // ── HELPERS ───────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+  // El backend devuelve UTC sin 'Z' — se la agregamos para que el navegador
+  // sepa que debe convertir a la zona horaria local del usuario (ej: UTC-5 Perú)
+  const utc = iso.endsWith('Z') ? iso : iso + 'Z';
+  return new Date(utc).toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'});
 }
 function tabLabel(s) { return {ALL:'Todos',PAID:'Pagados',PENDING:'Pendientes',CANCELLED:'Cancelados'}[s]||s; }
 function guessIcon(name='') {

@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soundstore — Mi perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ─── PROFILE HERO ──────────────────────────────────────── */
+.prof-hero{
+  background:linear-gradient(135deg,#0D1521 0%,#162035 100%);
+  color:var(--white);padding:2.75rem clamp(1rem,3vw,2rem) 3rem;
+  position:relative;overflow:hidden;
+}
+.prof-hero::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 55% 140% at 95% 55%, rgba(232,99,28,.22), transparent 62%);
+}
+.prof-hero::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(232,99,28,.3),transparent);
+}
+.prof-hero-inner{
+  max-width:780px;margin:0 auto;
+  display:flex;align-items:center;gap:2rem;
+  position:relative;z-index:1;flex-wrap:wrap;
+}
+.prof-avatar{
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  background:var(--lime);color:var(--white);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-size:30px;font-weight:300;
+  border:3px solid rgba(255,255,255,.1);
+  box-shadow:0 0 0 7px rgba(232,99,28,.18),var(--shadow-lg);
+}
+.prof-hero-info{display:flex;flex-direction:column;gap:.3rem;flex:1;min-width:0}
+.prof-hero-name{
+  font-family:'Fraunces',serif;font-size:clamp(22px,4vw,32px);
+  font-weight:300;letter-spacing:-.4px;color:var(--white);line-height:1;
+}
+.prof-hero-meta{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.25rem}
+.prof-hero-email{font-size:13px;color:rgba(255,255,255,.45)}
+.prof-role{
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--r4);
+  letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
+}
+.prof-role-admin{background:rgba(99,102,241,.25);color:#A5B4FC}
+.prof-role-customer{background:rgba(232,99,28,.22);color:#FDBA74}
+.prof-hero-since{font-size:12px;color:rgba(255,255,255,.35);margin-top:.25rem}
+.prof-hero-actions{margin-left:auto;flex-shrink:0}
+.btn-back-hero{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;
+  color:rgba(255,255,255,.5);background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r4);
+  padding:8px 16px;cursor:pointer;font-family:'Outfit',sans-serif;
+  transition:all var(--transition);white-space:nowrap;
+}
+.btn-back-hero:hover{background:rgba(255,255,255,.13);color:var(--white)}
+.btn-back-hero svg{flex-shrink:0}
+
+/* ─── PROFILE WRAP ──────────────────────────────────────── */
+.profile-wrap{max-width:780px;margin:0 auto;padding:2rem clamp(1rem,3vw,2rem) 4rem}
+.prof-section-label{
+  font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--ink4);margin-bottom:1rem;
+}
+
+/* ─── CARDS ─────────────────────────────────────────────── */
+.profile-card{
+  background:var(--white);border:1px solid var(--paper3);
+  border-radius:var(--r3);margin-bottom:1rem;overflow:hidden;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow var(--transition);
+}
+.profile-card:hover{box-shadow:var(--shadow)}
+.profile-card-hd{
+  padding:1rem 1.25rem;border-bottom:1px solid var(--paper3);
+  display:flex;align-items:center;gap:.75rem;background:var(--paper);
+}
+.prof-card-icon{
+  width:34px;height:34px;border-radius:var(--r2);
+  background:var(--white);border:1px solid var(--paper3);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink3);flex-shrink:0;
+}
+.profile-card-title{font-size:14px;font-weight:600;color:var(--ink);line-height:1}
+.profile-card-subtitle{font-size:12px;color:var(--ink4);font-weight:400;margin-top:1px}
+.profile-card-body{padding:1.5rem 1.25rem}
+
+/* ─── FORM FIELDS ───────────────────────────────────────── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:520px){.form-row{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:1rem}
+.field:last-child{margin-bottom:0}
+.field label{
+  font-size:11px;font-weight:600;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:.08em;
+}
+.field input{
+  font-size:14px;padding:11px 14px;
+  border:1.5px solid var(--paper3);border-radius:var(--r2);
+  background:var(--paper);color:var(--ink);
+  font-family:'Outfit',sans-serif;width:100%;box-sizing:border-box;
+  transition:border-color var(--transition),box-shadow var(--transition),background var(--transition);
+}
+.field input:focus{
+  outline:none;border-color:var(--lime);background:var(--white);
+  box-shadow:0 0 0 3px rgba(232,99,28,.12);
+}
+.field input:disabled{
+  color:var(--ink4);cursor:not-allowed;background:var(--paper2);
+}
+.field-hint{
+  font-size:11px;color:var(--ink4);margin-top:2px;
+  display:flex;align-items:center;gap:4px;
+}
+.field-err{font-size:11px;color:#DC2626;display:none;margin-top:2px}
+.field.has-err input{border-color:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+.field.has-err .field-err{display:block}
+
+/* ─── FORM FOOTER ───────────────────────────────────────── */
+.form-footer{
+  display:flex;align-items:center;justify-content:flex-end;
+  margin-top:1.5rem;padding-top:1.25rem;
+  border-top:1px solid var(--paper3);flex-wrap:wrap;gap:.75rem;
+}
+.msg-inline{font-size:12px;display:none;margin-right:auto;align-items:center;gap:5px}
+.msg-inline.ok{color:var(--green);display:flex}
+.msg-inline.err{color:#DC2626;display:flex}
+
+/* ─── BUTTONS ───────────────────────────────────────────── */
+.btn-save{
+  font-size:13px;font-weight:600;padding:10px 24px;border-radius:var(--r4);
+  background:var(--lime);color:var(--white);border:none;cursor:pointer;
+  font-family:'Outfit',sans-serif;
+  transition:background var(--transition),transform var(--transition),box-shadow var(--transition);
+  display:inline-flex;align-items:center;gap:7px;
+}
+.btn-save:hover:not(:disabled){
+  background:var(--lime-dark);transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(232,99,28,.35);
+}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.btn-save .btn-spinner{
+  width:13px;height:13px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:none;
+}
+.btn-save.loading .btn-spinner{display:block}
+.btn-save.loading .btn-label{display:none}
+
+/* ─── STATES ────────────────────────────────────────────── */
+.state-box{
+  text-align:center;padding:5rem 2rem;
+  background:var(--white);border:1px solid var(--paper3);border-radius:var(--r3);
+}
+.state-icon{font-size:40px;margin-bottom:.75rem}
+.state-title{font-family:'Fraunces',serif;font-size:20px;font-weight:300;margin-bottom:.5rem}
+.state-sub{font-size:13px;color:var(--ink4);line-height:1.6;margin-bottom:1.25rem}
+.btn-primary-sm{
+  display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+  padding:10px 22px;border-radius:var(--r4);background:var(--lime);
+  color:var(--white);border:none;cursor:pointer;font-family:'Outfit',sans-serif;
+  transition:opacity var(--transition);
+}
+.btn-primary-sm:hover{opacity:.85}
+
+/* ─── SKELETON ──────────────────────────────────────────── */
+.prof-skel{animation:pulse 1.4s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand" onclick="window.location.href='index.html'" style="cursor:pointer">Soundstore<span class="dot"></span></div>
+  <div class="nav-sep"></div>
+  <div class="nav-links">
+    <button class="nav-link" onclick="window.location.href='index.html'">Tienda</button>
+    <button class="nav-link" onclick="window.location.href='orders.html'">Mis pedidos</button>
+    <button class="nav-link on">Mi perfil</button>
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="nav-actions">
+    <div id="auth-area"></div>
+    <button class="cart-trigger" onclick="openCart()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <span class="cart-trigger-text">Carrito</span>
+      <span class="cart-n" id="cart-count">0</span>
+    </button>
+  </div>
+</nav>
+
+<!-- PROFILE HERO BANNER -->
+<div class="prof-hero" id="prof-hero">
+  <div class="prof-hero-inner">
+    <div class="prof-avatar" id="prof-avatar">—</div>
+    <div class="prof-hero-info">
+      <div class="prof-hero-name" id="prof-hero-name">
+        <span class="sk" style="display:inline-block;width:180px;height:28px;border-radius:4px"></span>
+      </div>
+      <div class="prof-hero-meta">
+        <span class="prof-hero-email" id="prof-hero-email"></span>
+        <span class="prof-role" id="prof-role-badge"></span>
+      </div>
+      <div class="prof-hero-since" id="prof-hero-since"></div>
+    </div>
+    <div class="prof-hero-actions">
+      <button class="btn-back-hero" onclick="window.location.href='index.html'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Volver a la tienda
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE CONTENT -->
+<div class="profile-wrap">
+  <div id="profile-content">
+    <div class="prof-skel">
+      <div class="sk" style="height:140px;border-radius:var(--r3);margin-bottom:1rem"></div>
+      <div class="sk" style="height:220px;border-radius:var(--r3)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-perks">
+    <div class="footer-perk">
+      <div class="footer-perk-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="footer-perk-text"><strong>Envío gratis</strong><small>En pedidos sobre S/ 100</small></div>
+    </div>
+    <div class="footer-perk">
+      <div class="footer-perk-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="footer-perk-text"><strong>Devolución gratis</strong><small>30 días sin preguntas</small></div>
+    </div>
+    <div class="footer-perk">
+      <div class="footer-perk-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <div class="footer-perk-text"><strong>Pago 100% seguro</strong><small>Encriptación SSL</small></div>
+    </div>
+    <div class="footer-perk">
+      <div class="footer-perk-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="footer-perk-text"><strong>Atención 24/7</strong><small>Soporte siempre disponible</small></div>
+    </div>
+  </div>
+  <div class="footer-main">
+    <div class="footer-brand-col">
+      <div class="footer-brand">Soundstore<span class="dot"></span></div>
+      <p class="footer-tagline">Descubre el sonido que te define. La mejor selección de vinilos, merch de bandas y accesorios musicales en Perú.</p>
+    </div>
+    <div class="footer-nav-col">
+      <div class="footer-col-title">Tienda</div>
+      <a class="footer-link" href="index.html">Todos los productos</a>
+      <a class="footer-link" href="index.html">🎵 Vinilos</a>
+      <a class="footer-link" href="index.html">👕 Ropa & Merch</a>
+      <a class="footer-link" href="index.html">🎸 Accesorios</a>
+    </div>
+    <div class="footer-nav-col">
+      <div class="footer-col-title">Mi cuenta</div>
+      <a class="footer-link" href="orders.html">Mis pedidos</a>
+      <a class="footer-link" href="profile.html">Mi perfil</a>
+    </div>
+    <div class="footer-nav-col">
+      <div class="footer-col-title">Soporte</div>
+      <a class="footer-link" href="#">Centro de ayuda</a>
+      <a class="footer-link" href="#">Devoluciones</a>
+      <a class="footer-link" href="#">Privacidad</a>
+      <a class="footer-link" href="#">Contacto</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-bottom-left">© 2026 Soundstore. Todos los derechos reservados.</span>
+    <div class="footer-bottom-right">
+      <span>Hecho con ♥ en Perú</span>
+      <div class="footer-badges">
+        <span class="footer-badge">SSL</span>
+        <span class="footer-badge">PCI</span>
+        <span class="footer-badge">HTTPS</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="overlay" id="auth-ov" onclick="overlayClick(event,'auth-ov')">
+  <div class="modal">
+    <button class="modal-x" onclick="closeOverlay('auth-ov')">×</button>
+    <div class="modal-logo">Soundstore<span class="dot"></span></div>
+    <div id="frm-login">
+      <h2 class="modal-h">Bienvenido</h2>
+      <p class="modal-sub">Iniciá sesión para continuar.</p>
+      <div class="modal-msg err" id="le"></div>
+      <div class="fld"><label>Correo</label><input type="email" id="l-em" placeholder="tu@correo.com" autocomplete="email"></div>
+      <div class="fld"><label>Contraseña</label><input type="password" id="l-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-submit" id="btn-login" onclick="doLogin()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Iniciar sesión</span>
+      </button>
+      <div class="modal-switch">¿Sin cuenta? <a onclick="switchForm('register')">Regístrate gratis</a></div>
+    </div>
+    <div id="frm-register" style="display:none">
+      <h2 class="modal-h">Crear cuenta</h2>
+      <p class="modal-sub">Únete y empieza a comprar hoy.</p>
+      <div class="modal-msg err" id="re"></div>
+      <div class="modal-msg ok" id="rs"></div>
+      <div class="fld-row">
+        <div class="fld"><label>Nombre</label><input type="text" id="r-fn" placeholder="Juan" autocomplete="given-name"></div>
+        <div class="fld"><label>Apellido</label><input type="text" id="r-ln" placeholder="Pérez" autocomplete="family-name"></div>
+      </div>
+      <div class="fld"><label>Correo</label><input type="email" id="r-em" placeholder="tu@correo.com" autocomplete="email"></div>
+      <div class="fld"><label>Contraseña</label><input type="password" id="r-pw" placeholder="Mínimo 8 caracteres" autocomplete="new-password"></div>
+      <button class="btn-submit" id="btn-register" onclick="doRegister()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Crear cuenta</span>
+      </button>
+      <div class="modal-switch">¿Ya tienes cuenta? <a onclick="switchForm('login')">Iniciar sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- CART -->
+<div class="cart-bg" id="cart-bg" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-hd">
+    <div class="cart-hd-left">
+      <h3 class="cart-title">Mi carrito</h3>
+      <span class="cart-n-badge" id="cart-badge-n">0 items</span>
+    </div>
+    <button class="cart-close" onclick="closeCart()">×</button>
+  </div>
+  <div class="cart-body" id="cart-body"></div>
+  <div class="cart-ft" id="cart-ft" style="display:none">
+    <div class="cart-rows">
+      <div class="cart-row"><span>Subtotal</span><span id="ct-sub" style="font-family:'DM Mono',monospace">S/ 0.00</span></div>
+      <div class="cart-row"><span>Envío</span><span class="free-ship">Gratis 🎉</span></div>
+      <div class="cart-hr"></div>
+      <div class="cart-row total"><span>Total</span><span class="total-val" id="ct-total">S/ 0.00</span></div>
+    </div>
+    <button class="btn-checkout" onclick="doCheckout()">
+      Confirmar pedido
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <div class="secure-note">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      Pago seguro · Devolución gratis
+    </div>
+  </div>
+</div>
+
+<!-- CHECKOUT CONFIRM MODAL -->
+<div class="confirm-ov" id="confirm-ov" onclick="cancelCheckout(event)">
+  <div class="confirm-modal">
+    <div class="confirm-hd">
+      <div class="confirm-icon">🛒</div>
+      <h3>Confirmar pedido</h3>
+    </div>
+    <div class="confirm-items" id="confirm-items"></div>
+    <div class="confirm-divider"></div>
+    <div class="confirm-total-row">
+      <span class="confirm-total-lbl">Total a pagar</span>
+      <span class="confirm-total-val" id="confirm-total">S/ 0.00</span>
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn-confirm-ok" id="btn-confirm-ok" onclick="confirmCheckout()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Confirmar y pagar</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"><span id="t-icon">✓</span><span id="t-msg"></span></div>
+
+<script src="app.js"></script>
+<script>
+// ── PROFILE PAGE LOGIC ─────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!token) {
+    sessionStorage.setItem('ss_redirect', window.location.href);
+    window.location.href = 'index.html';
+    return;
+  }
+  loadProfile();
+});
+
+// ── LOAD & RENDER ──────────────────────────────────────────────
+async function loadProfile() {
+  try {
+    const r = await apiFetch('/users/me');
+    if (!r.ok) throw new Error();
+    const profile = await r.json();
+    renderProfile(profile);
+  } catch(e) {
+    if (e.message !== 'Sesión expirada') {
+      document.getElementById('profile-content').innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Error al cargar el perfil</div>
+          <div class="state-sub">Intentá de nuevo en unos momentos.</div>
+          <button class="btn-primary-sm" onclick="loadProfile()">Reintentar</button>
+        </div>`;
+    }
+  }
+}
+
+function renderProfile(p) {
+  const initials = (p.firstName[0] + p.lastName[0]).toUpperCase();
+  const isAdmin  = p.role === 'ADMIN';
+  const memberDate = p.memberSince
+    ? new Date(p.memberSince + 'Z').toLocaleDateString('es-PE', {day:'2-digit', month:'long', year:'numeric'})
+    : '—';
+
+  // ── Actualizar hero banner ──
+  const avatarEl = document.getElementById('prof-avatar');
+  if (avatarEl) avatarEl.textContent = initials;
+
+  const nameEl = document.getElementById('prof-hero-name');
+  if (nameEl) nameEl.textContent = `${p.firstName} ${p.lastName}`;
+
+  const emailEl = document.getElementById('prof-hero-email');
+  if (emailEl) emailEl.textContent = p.email;
+
+  const roleEl = document.getElementById('prof-role-badge');
+  if (roleEl) {
+    roleEl.textContent = isAdmin ? 'Admin' : 'Cliente';
+    roleEl.className   = 'prof-role ' + (isAdmin ? 'prof-role-admin' : 'prof-role-customer');
+  }
+
+  const sinceEl = document.getElementById('prof-hero-since');
+  if (sinceEl) sinceEl.textContent = `Miembro desde ${memberDate}`;
+
+  // ── Renderizar formularios ──
+  document.getElementById('profile-content').innerHTML = `
+
+    <!-- Datos personales -->
+    <div class="profile-card">
+      <div class="profile-card-hd">
+        <div class="prof-card-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <div>
+          <div class="profile-card-title">Datos personales</div>
+          <div class="profile-card-subtitle">Nombre que aparece en tus pedidos</div>
+        </div>
+      </div>
+      <div class="profile-card-body">
+        <div class="form-row">
+          <div class="field" id="field-fn">
+            <label>Nombre</label>
+            <input type="text" id="inp-fn" value="${p.firstName}" placeholder="Tu nombre" autocomplete="given-name">
+            <span class="field-err" id="err-fn"></span>
+          </div>
+          <div class="field" id="field-ln">
+            <label>Apellido</label>
+            <input type="text" id="inp-ln" value="${p.lastName}" placeholder="Tu apellido" autocomplete="family-name">
+            <span class="field-err" id="err-ln"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" value="${p.email}" disabled autocomplete="email">
+          <span class="field-hint">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            El email no puede modificarse
+          </span>
+        </div>
+        <div class="form-footer">
+          <span id="msg-profile" class="msg-inline"></span>
+          <button class="btn-save" id="btn-profile" onclick="saveProfile()">
+            <span class="btn-label">Guardar cambios</span>
+            <div class="btn-spinner"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cambiar contraseña -->
+    <div class="profile-card">
+      <div class="profile-card-hd">
+        <div class="prof-card-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div>
+          <div class="profile-card-title">Seguridad</div>
+          <div class="profile-card-subtitle">Cambiá tu contraseña de acceso</div>
+        </div>
+      </div>
+      <div class="profile-card-body">
+        <div class="field" id="field-cp">
+          <label>Contraseña actual</label>
+          <input type="password" id="inp-cp" placeholder="••••••••" autocomplete="current-password">
+          <span class="field-err" id="err-cp"></span>
+        </div>
+        <div class="form-row">
+          <div class="field" id="field-np">
+            <label>Nueva contraseña</label>
+            <input type="password" id="inp-np" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            <span class="field-err" id="err-np"></span>
+          </div>
+          <div class="field" id="field-rp">
+            <label>Repetir contraseña</label>
+            <input type="password" id="inp-rp" placeholder="Repetí la nueva contraseña" autocomplete="new-password">
+            <span class="field-err" id="err-rp"></span>
+          </div>
+        </div>
+        <div class="form-footer">
+          <span id="msg-pw" class="msg-inline"></span>
+          <button class="btn-save" id="btn-pw" onclick="savePassword()">
+            <span class="btn-label">Actualizar contraseña</span>
+            <div class="btn-spinner"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── SAVE PROFILE ───────────────────────────────────────────────
+async function saveProfile() {
+  clearFieldErr('fn'); clearFieldErr('ln');
+  const fn = document.getElementById('inp-fn').value.trim();
+  const ln = document.getElementById('inp-ln').value.trim();
+  let valid = true;
+
+  if (fn.length < 2) { setFieldErr('fn', 'Mínimo 2 caracteres'); valid = false; }
+  if (ln.length < 2) { setFieldErr('ln', 'Mínimo 2 caracteres'); valid = false; }
+  if (!valid) return;
+
+  const btn = document.getElementById('btn-profile');
+  setLoading(btn, true);
+  setInlineMsg('msg-profile', '', '');
+
+  try {
+    const r = await apiFetch('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ firstName: fn, lastName: ln })
+    });
+    const data = await r.json();
+
+    if (!r.ok) { setInlineMsg('msg-profile', data.message || 'Error al guardar', 'err'); return; }
+
+    user = { ...user, firstName: data.firstName, lastName: data.lastName };
+    localStorage.setItem('ss_user', JSON.stringify(user));
+    renderAuth();
+
+    // Actualizar hero
+    const initials = (data.firstName[0] + data.lastName[0]).toUpperCase();
+    const av = document.getElementById('prof-avatar');
+    const nm = document.getElementById('prof-hero-name');
+    if (av) av.textContent = initials;
+    if (nm) nm.textContent = `${data.firstName} ${data.lastName}`;
+
+    setInlineMsg('msg-profile', '✓ Cambios guardados', 'ok');
+    toast('Perfil actualizado correctamente', '✓');
+
+  } catch(e) {
+    if (e.message !== 'Sesión expirada')
+      setInlineMsg('msg-profile', 'Error de conexión', 'err');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── SAVE PASSWORD ──────────────────────────────────────────────
+async function savePassword() {
+  clearFieldErr('cp'); clearFieldErr('np'); clearFieldErr('rp');
+  const cp = document.getElementById('inp-cp').value;
+  const np = document.getElementById('inp-np').value;
+  const rp = document.getElementById('inp-rp').value;
+  let valid = true;
+
+  if (!cp) { setFieldErr('cp', 'Ingresá tu contraseña actual'); valid = false; }
+  if (np.length < 6) { setFieldErr('np', 'Mínimo 6 caracteres'); valid = false; }
+  if (np !== rp) { setFieldErr('rp', 'Las contraseñas no coinciden'); valid = false; }
+  if (!valid) return;
+
+  const btn = document.getElementById('btn-pw');
+  setLoading(btn, true);
+  setInlineMsg('msg-pw', '', '');
+
+  try {
+    const r = await apiFetch('/users/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword: cp, newPassword: np })
+    });
+
+    if (r.status === 204) {
+      document.getElementById('inp-cp').value = '';
+      document.getElementById('inp-np').value = '';
+      document.getElementById('inp-rp').value = '';
+      setInlineMsg('msg-pw', '✓ Contraseña actualizada', 'ok');
+      toast('Contraseña cambiada correctamente', '🔐');
+      return;
+    }
+
+    const data = await r.json();
+    if (data.message?.includes('actual')) {
+      setFieldErr('cp', data.message);
+    } else {
+      setInlineMsg('msg-pw', data.message || 'Error al cambiar contraseña', 'err');
+    }
+
+  } catch(e) {
+    if (e.message !== 'Sesión expirada')
+      setInlineMsg('msg-pw', 'Error de conexión', 'err');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── HELPERS ────────────────────────────────────────────────────
+function setFieldErr(field, msg) {
+  const f = document.getElementById(`field-${field}`);
+  const e = document.getElementById(`err-${field}`);
+  if (f) f.classList.add('has-err');
+  if (e) e.textContent = msg;
+}
+function clearFieldErr(field) {
+  const f = document.getElementById(`field-${field}`);
+  const e = document.getElementById(`err-${field}`);
+  if (f) f.classList.remove('has-err');
+  if (e) e.textContent = '';
+}
+function setLoading(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle('loading', on);
+  btn.disabled = on;
+}
+function setInlineMsg(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'msg-inline' + (type ? ' ' + type : '');
+}
+</script>
+</body>
+</html>
